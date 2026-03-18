@@ -4,7 +4,8 @@ import Category from "@/models/Category";
 import MenuItem from "@/models/MenuItem";
 import { notFound } from "next/navigation";
 
-// Opcional: Generar metadatos dinámicos para SEO o al compartir por WhatsApp
+import FloatingCategoryNav from "@/components/menu/FloatingCategoryNav";
+
 export async function generateMetadata({ params }) {
   const { restaurantSlug } = await params;
   await dbConnect();
@@ -18,95 +19,138 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function PublicMenuPage({ params }) {
-  // En las versiones más recientes de Next.js (15 y 16), params es una promesa
   const { restaurantSlug } = await params;
 
   await dbConnect();
 
-  // 1. Buscar el restaurante por su slug en la URL
   const restaurant = await Restaurant.findOne({
     slug: restaurantSlug,
     isActive: true,
   }).lean();
 
-  // Si alguien escribe mal la URL o el restaurante está inactivo, lanzamos un 404
   if (!restaurant) {
     notFound();
   }
 
-  // 2. Traer las categorías ordenadas
   const categories = await Category.find({ restaurantId: restaurant._id })
     .sort({ order: 1 })
     .lean();
-
-  // 3. Traer solo los platos que estén marcados como disponibles (isAvailable: true)
   const menuItems = await MenuItem.find({
     restaurantId: restaurant._id,
     isAvailable: true,
   }).lean();
 
+  // NUEVO: Filtramos para quedarnos solo con las categorías que no están vacías
+  const populatedCategories = categories.filter((category) => {
+    return menuItems.some(
+      (item) => item.categoryId.toString() === category._id.toString(),
+    );
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      {/* Cabecera del Restaurante */}
-      <header className="bg-white px-6 py-8 shadow-sm text-center">
-        <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-          {restaurant.name}
-        </h1>
-        {restaurant.description && (
-          <p className="text-gray-500 mt-2 text-sm">{restaurant.description}</p>
-        )}
+    <div className="min-h-screen bg-[#f8fafc] font-sans pb-16">
+      {/* Cabecera Tipo "Hero" */}
+      <header className="relative bg-white pt-12 pb-10 px-6 shadow-sm overflow-hidden text-center rounded-b-3xl mb-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-slate-100 opacity-50"></div>
+        <div className="relative z-10 max-w-2xl mx-auto">
+          {/* Si tuvieras un logo, iría aquí */}
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-3">
+            {restaurant.name}
+          </h1>
+          {restaurant.description && (
+            <p className="text-slate-500 text-sm md:text-base font-medium max-w-md mx-auto">
+              {restaurant.description}
+            </p>
+          )}
+        </div>
       </header>
 
-      {/* Listado del Menú */}
-      <main className="max-w-3xl mx-auto px-4 mt-8">
+      {/* Contenedor Principal del Menú */}
+      <main className="max-w-3xl mx-auto px-4 md:px-6">
         {categories.length === 0 ? (
-          <p className="text-center text-gray-500 mt-10">
-            Este menú aún no tiene platos.
-          </p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
+            <p className="text-slate-400 font-medium">
+              Este menú aún se está cocinando...
+            </p>
+          </div>
         ) : (
-          <div className="space-y-10">
-            {categories.map((category) => {
-              // Filtramos los platos que pertenecen a esta categoría específica
+          <div className="space-y-12">
+            {populatedCategories.map((category) => {
               const itemsInCategory = menuItems.filter(
                 (item) =>
                   item.categoryId.toString() === category._id.toString(),
               );
 
-              // Si una categoría no tiene platos disponibles, no la mostramos para no dejar espacios vacíos
               if (itemsInCategory.length === 0) return null;
 
               return (
-                <section key={category._id} className="scroll-mt-6">
-                  {/* Título de la Categoría */}
-                  <h2 className="text-2xl font-bold text-gray-800 border-b-2 border-gray-200 pb-2 mb-4">
-                    {category.name}
-                  </h2>
+                <section
+                  key={category._id}
+                  id={category._id.toString()}
+                  className="scroll-mt-24 mb-12"
+                >
+                  {/* Título de la Categoría Estilizado */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+                      {category.name}
+                    </h2>
+                    <div className="h-px bg-slate-200 flex-grow"></div>
+                  </div>
 
-                  {/* Tarjetas de Platos */}
-                  <div className="grid grid-cols-1 gap-4">
+                  {/* Grid de Platos */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {itemsInCategory.map((item) => (
-                      <div
+                      <article
                         key={item._id}
-                        className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between gap-4"
+                        className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-100 flex overflow-hidden group"
                       >
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900">
-                            {item.name}
-                          </h3>
-                          {item.description && (
-                            <p className="text-gray-500 text-sm mt-1 leading-snug">
-                              {item.description}
-                            </p>
+                        {/* Contenido de Texto */}
+                        <div className="flex-1 p-5 flex flex-col justify-between">
+                          <div>
+                            <div className="flex justify-between items-start gap-2 mb-2">
+                              <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                                {item.name}
+                              </h3>
+                              {/* Precio destacado */}
+                              <span className="text-lg font-black text-blue-600 shrink-0">
+                                ${item.price.toFixed(2)}
+                              </span>
+                            </div>
+
+                            {item.description && (
+                              <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Footer de la tarjeta (Alérgenos o etiquetas) */}
+                          {item.allergens && item.allergens.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-auto">
+                              {item.allergens.map((allergen, idx) => (
+                                <span
+                                  key={idx}
+                                  className="bg-orange-50 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide"
+                                >
+                                  {allergen}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
 
-                        <div className="flex flex-col items-end justify-start">
-                          {/* Formateamos el precio para que siempre tenga dos decimales */}
-                          <span className="text-lg font-black text-blue-600">
-                            ${item.price.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
+                        {/* Imagen del Plato (Si existe) */}
+                        {item.imageUrl && (
+                          <div className="relative w-32 sm:w-40 shrink-0 bg-slate-100 overflow-hidden">
+                            <img
+                              src={item.imageUrl}
+                              alt={`Foto de ${item.name}`}
+                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
+                      </article>
                     ))}
                   </div>
                 </section>
@@ -116,10 +160,25 @@ export default async function PublicMenuPage({ params }) {
         )}
       </main>
 
-      {/* Pie de página sutil */}
-      <footer className="mt-16 text-center text-xs text-gray-400">
-        <p>Menú digital creado con tu App</p>
+      {/* Pie de página */}
+      <footer className="mt-20 text-center">
+        <div className="inline-flex items-center justify-center gap-2 bg-white px-5 py-2.5 rounded-full shadow-sm border border-slate-100">
+          <span className="text-xs text-slate-400 font-medium">
+            Menú digital creado con
+          </span>
+          <span className="text-xs font-black text-slate-700">TuApp</span>
+        </div>
       </footer>
+      {/* NUESTRA NUEVA BARRA FLOTANTE */}
+      <FloatingCategoryNav
+        categories={populatedCategories.map((cat) => ({
+          ...cat,
+          _id: cat._id.toString(),
+          restaurantId: cat.restaurantId.toString(), // Faltaba serializar esto
+          createdAt: cat.createdAt ? cat.createdAt.toISOString() : null, // Y las fechas
+          updatedAt: cat.updatedAt ? cat.updatedAt.toISOString() : null,
+        }))}
+      />
     </div>
   );
 }

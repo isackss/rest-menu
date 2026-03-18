@@ -124,22 +124,22 @@ export default function CreateMenuItemForm({ restaurantId, categories }) {
           ></textarea>
         </div>
 
-        {/* URL de la Imagen y Disponibilidad */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50 p-4 rounded-lg">
-          <div className="w-full sm:w-2/3">
+        {/* Subida de Imagen y Disponibilidad */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-gray-50 p-4 rounded-lg">
+          <div className="w-full md:w-2/3">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL de la Imagen (Opcional)
+              Foto del Plato (Opcional)
             </label>
             <input
-              type="url"
-              name="imageUrl"
-              placeholder="https://..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              type="file"
+              name="imageFile" // Debe coincidir con formData.get('imageFile') en el Server Action
+              accept="image/*" // Solo permite seleccionar imágenes
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer"
             />
           </div>
 
-          {/* Checkbox de Disponibilidad (Diseño tipo Switch) */}
-          <div className="w-full sm:w-auto flex items-center gap-3 mt-4 sm:mt-0">
+          {/* Checkbox de Disponibilidad */}
+          <div className="w-full md:w-auto flex items-center gap-3 mt-4 md:mt-0">
             <input
               type="checkbox"
               name="isAvailable"
